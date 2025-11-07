@@ -16,8 +16,8 @@ final class TimerAPI {
     func createTimer(callback: JSValue, ms: Double, repeats: Bool) -> String {
         let timeInterval = ms / 1000.0
         let uuid = UUID().uuidString
-        let timer = Timer(timeInterval: timeInterval, repeats: repeats) { [weak self, weak callback] _ in
-            if let callback = callback, callback.isObject {
+        let timer = Timer(timeInterval: timeInterval, repeats: repeats) { [weak self] _ in
+            if callback.context != nil && callback.isObject {
                 callback.call(withArguments: [])
             }
 
@@ -46,11 +46,11 @@ final class TimerAPI {
     }
 
     func registerAPIInto(context: JSContext) {
-        let setTimeout: @convention(block) (JSValue, Double) -> String = { callback, ms in
-            self.createTimer(callback: callback, ms: ms, repeats: false)
+        let setTimeout: @convention(block) (JSValue, Double) -> String = { [weak self] callback, ms in
+            self?.createTimer(callback: callback, ms: ms, repeats: false) ?? ""
         }
-        let setInterval: @convention(block) (JSValue, Double) -> String = { callback, ms in
-            self.createTimer(callback: callback, ms: ms, repeats: true)
+        let setInterval: @convention(block) (JSValue, Double) -> String = { [weak self] callback, ms in
+            self?.createTimer(callback: callback, ms: ms, repeats: true) ?? ""
         }
         let clearTimeout: @convention(block) (String) -> Void = { [weak self] timerId in
             self?.invalidateTimer(with: timerId)
