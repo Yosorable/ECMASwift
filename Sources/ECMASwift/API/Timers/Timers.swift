@@ -17,14 +17,15 @@ final class TimerAPI {
         let timeInterval = ms / 1000.0
         let uuid = UUID().uuidString
         let timer = Timer(timeInterval: timeInterval, repeats: repeats) { [weak self] _ in
-            if callback.context != nil && callback.isObject {
+            guard let self else { return }
+            if callback.isObject {
                 callback.call(withArguments: [])
             }
 
             if !repeats {
-                os_unfair_lock_lock(&self!.lock)
-                self?.timers[uuid] = nil
-                os_unfair_lock_unlock(&self!.lock)
+                os_unfair_lock_lock(&self.lock)
+                self.timers[uuid] = nil
+                os_unfair_lock_unlock(&self.lock)
             }
         }
 

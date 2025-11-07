@@ -19,23 +19,38 @@ import JavaScriptCore
 /// - ``Crypto``
 public struct JSRuntime {
     public let context: JSContext = .init()
+    private let blobAPI = BlobAPI()
+    private let abortControllerAPI = AbortControllerAPI()
+    private let requestAPI = RequestAPI()
+    private let headersAPI = HeadersAPI()
+    private let urlSearchParamsAPI = URLSearchParamsAPI()
+    private let urlAPI = URLAPI()
+    private let consoleAPI = ConsoleAPI()
+    private let timerAPI = TimerAPI()
+    private let textEncoderAPI = TextEncoderAPI()
+    private let cryptoAPI = CryptoAPI()
+
+
+    private let fetchAPI: FetchAPI
+
 
     public init(client: HTTPClient = URLSession.shared) {
+        fetchAPI = FetchAPI(client: client)
         registerAPIs(client: client)
     }
 
     private func registerAPIs(client: HTTPClient) {
         // Runtime APIs
-        BlobAPI().registerAPIInto(context: context)
-        AbortControllerAPI().registerAPIInto(context: context)
-        RequestAPI().registerAPIInto(context: context)
-        FetchAPI(client: client).registerAPIInto(context: context)
-        HeadersAPI().registerAPIInto(context: context)
-        URLSearchParamsAPI().registerAPIInto(context: context)
-        URLAPI().registerAPIInto(context: context)
-        ConsoleAPI().registerAPIInto(context: context)
-        TimerAPI().registerAPIInto(context: context)
-        TextEncoderAPI().registerAPIInto(context: context)
-        CryptoAPI().registerAPIInto(context: context)
+        blobAPI.registerAPIInto(context: context)
+        abortControllerAPI.registerAPIInto(context: context)
+        requestAPI.registerAPIInto(context: context)
+        fetchAPI.registerAPIInto(context: context)
+        headersAPI.registerAPIInto(context: context)
+        urlSearchParamsAPI.registerAPIInto(context: context)
+        urlAPI.registerAPIInto(context: context)
+        consoleAPI.registerAPIInto(context: context)
+        timerAPI.registerAPIInto(context: context)
+        textEncoderAPI.registerAPIInto(context: context)
+        cryptoAPI.registerAPIInto(context: context)
     }
 }

@@ -41,9 +41,6 @@ import JavaScriptCore
 /// Helper to register the ``Crypto`` API with a context.
 struct CryptoAPI {
     public func registerAPIInto(context: JSContext) {
-        context.setObject(
-            unsafeBitCast(Crypto(), to: AnyObject.self),
-            forKeyedSubscript: "crypto" as NSString
-        )
+        context.setObject(Crypto(),forKeyedSubscript: "crypto" as NSString)
     }
 }

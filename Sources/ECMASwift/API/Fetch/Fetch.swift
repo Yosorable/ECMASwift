@@ -34,8 +34,9 @@ public final class FetchAPI {
         let jsonjs: @convention(block) () -> Any? = {
             FetchAPI.json(data: data)
         }
-        let textjs: @convention(block) () -> Any? = {
-            FetchAPI.text(data: data, context: context)
+        let textjs: @convention(block) () -> Any? = { [weak context] in
+            guard let context else { return nil }
+            return FetchAPI.text(data: data, context: context)
         }
         return [
             "url": response.url?.absoluteString as Any,
@@ -47,9 +48,10 @@ public final class FetchAPI {
     }
 
     public func registerAPIInto(context: JSContext) {
-        let fetch: @convention(block) (JSValue, JSValue?) -> JSManagedValue? = { url, options in
+        let fetch: @convention(block) (JSValue, JSValue?) -> JSManagedValue? = { [ weak self, weak context] url, options in
+            guard let context else { return nil }
             var fetchTask: Task<Void, Never>?
-            let promise = JSValue(newPromiseIn: context) { [weak self] resolve, reject in
+            let promise = JSValue(newPromiseIn: context) { resolve, reject in
                 guard let resolve, let reject else { return }
                 guard var request = url.isInstance(of: Request.self) 
                         ? (url.toObjectOf(Request.self) as? Request)?.request
@@ -67,14 +69,14 @@ public final class FetchAPI {
                     request.httpBody = options.forProperty("body").toString().data(using: .utf8)
                 }
                 guard let client = self?.client else { return }
-                fetchTask = Task {
+                fetchTask = Task { [weak resolve, weak reject] in
                     do {
                         let (data, response) = try await client.data(for: request)
                         guard let response = (response as? HTTPURLResponse) else {
-                            reject.call(withArguments: ["URL is empty"])
+                            reject?.call(withArguments: ["URL is empty"])
                             return
                         }
-                        resolve.call(withArguments: [
+                        resolve?.call(withArguments: [
                             FetchAPI.createResponse(
                                 response: response,
                                 data: data,
@@ -82,7 +84,7 @@ public final class FetchAPI {
                             )
                         ])
                     } catch let error {
-                        reject.call(withArguments: [
+                        reject?.call(withArguments: [
                             [
                                 "name": "FetchError",
                                 "response": "\(error.localizedDescription)"
@@ -93,11 +95,10 @@ public final class FetchAPI {
                 }
                 if let options = options, options.hasValue {
                     if let signal = options.forProperty("signal").toType(AbortSignal.self) {
-                        signal.onAbort = {
-                            if signal.aborted {
-                                fetchTask?.cancel()
-                                reject.call(withArguments: [["name": "AbortError"]])
-                            }
+                        signal.onAbort = { [weak signal, weak reject] in
+                            guard let signal, signal.aborted else { return }
+                            fetchTask?.cancel()
+                            reject?.call(withArguments: [["name": "AbortError"]])
                         }
                     }
                 }
